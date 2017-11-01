@@ -1,9 +1,15 @@
 ---
-title: "Untitled"
+title: "Arquivo de desenvolvimento"
 author: "LucianoCancian"
 date: "1 de novembro de 2017"
-output: html_document
+output:
+  bookdown::word_document2:
+lang: pt
 ---
+Mover o arquivo word dentro da pasta docs
+```{r, eval=FALSE, echo=FALSE}
+rmarkdown::render("main.Rmd", encoding = "UTF-8", output_dir = "../docs" )
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
