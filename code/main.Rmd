@@ -5,6 +5,9 @@ date: "1 de novembro de 2017"
 output:
   bookdown::word_document2:
     reference_docx: ../docs/template.docx
+bibliography: biblio.bib
+csl: abnt.csl
+
 lang: pt
 ---
 
@@ -20,9 +23,10 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introdução
 
+Aqui será iniciada a introdução
 Texto de exemplo
 
-Texto de exemplo
+Texto de exemplo conforme [@AngeliniEtAl2017] ou @AngeliniEtAl2017 e @KhoshgoftarmaneshEtAl2018
 
 Texto de exemplo
 
@@ -46,3 +50,6 @@ Texto. Texto. Texto. Texto. Texto. Texto.
 Texto. Texto. Texto. Texto. Texto. Texto.
 Texto. Texto. Texto. Texto. Texto. Texto.
 Texto. Texto. Texto. Texto. Texto. Texto.
+
+# Referências
+
