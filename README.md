@@ -1,0 +1,1 @@
+# geostatistica_sm
