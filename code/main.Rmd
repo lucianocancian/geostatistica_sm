@@ -8,8 +8,43 @@ lang: pt
 ---
 Mover o arquivo word dentro da pasta docs
 ```{r, eval=FALSE, echo=FALSE}
-rmarkdown::render("main.Rmd", encoding = "UTF-8", output_dir = "../docs" )
+rmarkdown::render("main.Rmd", encoding = "UTF-8", output_dir = "../docs")
 ```
+
+#Introdução
+Texto de exemplo
+
+
+Texto de exemplo
+
+Texto de exemplo
+
+Texto de exemplo
+
+#Material e Métodos
+
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+
+#Dados do Solo
+
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+Texto. Texto. Texto. Texto. Texto. Texto.
+
+
+
+
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
