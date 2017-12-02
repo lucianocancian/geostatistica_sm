@@ -53,3 +53,67 @@ Texto. Texto. Texto. Texto. Texto. Texto.
 
 # Referências
 
+
+Aqui serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
+```{r}
+install.packages("mapview")
+install.packages("devtools")
+installed.packages("rgdal")
+install.packages("sp")
+devtools::install_github("samuel-rosa/febr-package")
+
+```
+
+Após os pacotes serem instalados, devem ser carregados (a partir do comando library)
+```{r}
+library(mapview)
+library(devtools)
+library(rgdal)
+library(sp)
+library(febr)
+```
+
+Com os pacotes carregados, serão baixados os dados do FEBR para as áreas estudadas. Como a área estudada compreende o município de Santa MAria/RS, serão utilizados três bancos de dados com amostras coletadas em trabalhos realizados no município. São eles: ctb0006, referente ao conjunto de dados do 'Zoneamento edáfico de culturas para o município de Santa Maria - RS, visando o ordenamento territorial'; ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS; e ctb
+
+```{r}
+
+
+
+febr::observations('ctb0003') #baixar os conjuntos de dados do febr
+febr::observations('ctb0031')
+febr::observations('ctb0006')
+a <- febr::observations('ctb0003')
+b <- febr::observations('ctb0031')
+c<- febr::observations('ctb0006')
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+```{r, }
+str(dados_ag)
+nlevels(dados_ag$Solo)
+barplot(table(dados_ag$Solo))
+summary(dados_ag$Solo)
+```
+
+```{r, fig.asp= 1}
+wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs') #cria o objeto
+
+
+#rampa de cores
+col_soil_var <- topo.colors(100)
+
+sp::coordinates(dados_ag) <- c("X" , "Y")
+sp::proj4string(dados_ag) <- wgs84utm22s 
+dados_ag <- sp::spTransform(dados_ag, wgs84utm22s)
+
+plot(Y~X, dados_ag)
+mapview(dados_ag)
+```
