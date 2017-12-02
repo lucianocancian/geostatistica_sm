@@ -53,8 +53,9 @@ Texto. Texto. Texto. Texto. Texto. Texto.
 
 # Referências
 
+Definido o modelo do arquivo de texto de saída dos dados, será dado início ao desenvolvimento do projeto. A cada passo, buscarei trazer ao menos uma breve explicação de cada passo.
 
-Aqui serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
+Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
 ```{r}
 install.packages("mapview")
 install.packages("devtools")
@@ -76,31 +77,35 @@ library(febr)
 Com os pacotes carregados, serão baixados os dados do FEBR para as áreas estudadas. Como a área estudada compreende o município de Santa MAria/RS, serão utilizados três bancos de dados com amostras coletadas em trabalhos realizados no município. São eles: ctb0006, referente ao conjunto de dados do 'Zoneamento edáfico de culturas para o município de Santa Maria - RS, visando o ordenamento territorial'; ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS; e ctb
 
 ```{r}
-
-
-
-febr::observations('ctb0003') #baixar os conjuntos de dados do febr
-febr::observations('ctb0031')
-febr::observations('ctb0006')
-a <- febr::observations('ctb0003')
-b <- febr::observations('ctb0031')
-c<- febr::observations('ctb0006')
+dnos <- febr::observations('ctb0003', which.cols = 'all', progress = FALSE)
+sm <- febr::observations('ctb0006', which.cols = 'all', progress = FALSE)
+ag <- febr::observations('ctb0031', which.cols = 'all', progress = FALSE) #esta dando erro ao baixar os dados
 ```
+Como os dados provem de diferentes conjuntos de dados, devem ser unidos em uma mesma planilha de dados.
 
 ```{r}
-
+id <- c('dnos', 'sm')
+pontos <- 
+  merge(dnos, sm, by.x = id, by.y = id) %>% 
+  select(observacao_id, coord_x, coord_y, taxon_sibcs_2009,taxon_sibcs_2013)
+rm(dnos, sm)
 ```
-
+As coordenadas devem ser transgormadas para SIRGAS 2000
 ```{r}
-
+sp::coordinates(pontos) <- ~ coord_x + coord_y
+sp::proj4string(pontos) <- sirgas2000
+pontos <- sp::spTransform(pontos400, wgs84utm22s)
 ```
 
+
+
+Carregados os dados dos três conjuntos, serão agora visualizados os dados de classe de solo de cada um, buscando visualizar inconsistênias ou denominações diferentes às mesmas classes de solo. A fim de facilitar a predição, em um primeiro momento serão utilizadas apenas as informações do segundo nível categorico das classes de solo, conforme o Sistema Brasileiro de Classificação de Solos (SiBCS).
 
 ```{r, }
-str(dados_ag)
-nlevels(dados_ag$Solo)
-barplot(table(dados_ag$Solo))
-summary(dados_ag$Solo)
+str(ctb0003$taxon_sibcs_2013)
+nlevels(a$taxon_sibcs_2013)
+barplot(table(a$taxon_sibcs_2013))
+summary(a$taxon_sibcs_2013)
 ```
 
 ```{r, fig.asp= 1}
