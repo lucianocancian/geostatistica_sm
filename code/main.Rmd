@@ -84,19 +84,14 @@ ag <- febr::observations('ctb0031', which.cols = 'all', progress = FALSE) #esta 
 Como os dados provem de diferentes conjuntos de dados, devem ser unidos em uma mesma planilha de dados.
 
 ```{r}
-id <- c('dnos', 'sm')
+id <- c('dnos', 'sm', recursive = FALSE, use.names=TRUE)
 pontos <- 
   merge(dnos, sm, by.x = id, by.y = id) %>% 
-  select(observacao_id, coord_x, coord_y, taxon_sibcs_2009,taxon_sibcs_2013)
+  select(observacao_id, coord_x, coord_y, taxon_sibcs_2009, taxon_sibcs_2013)
+#esta dando erro...
+
 rm(dnos, sm)
 ```
-As coordenadas devem ser transgormadas para SIRGAS 2000
-```{r}
-sp::coordinates(pontos) <- ~ coord_x + coord_y
-sp::proj4string(pontos) <- sirgas2000
-pontos <- sp::spTransform(pontos400, wgs84utm22s)
-```
-
 
 
 Carregados os dados dos três conjuntos, serão agora visualizados os dados de classe de solo de cada um, buscando visualizar inconsistênias ou denominações diferentes às mesmas classes de solo. A fim de facilitar a predição, em um primeiro momento serão utilizadas apenas as informações do segundo nível categorico das classes de solo, conforme o Sistema Brasileiro de Classificação de Solos (SiBCS).
@@ -107,6 +102,27 @@ nlevels(a$taxon_sibcs_2013)
 barplot(table(a$taxon_sibcs_2013))
 summary(a$taxon_sibcs_2013)
 ```
+Agora, realiza-se a padronização dos nomes de classes de solo, mantendo até o segundo nível categórico.
+```{r}
+#padronizar a planilha
+```
+
+
+Com os dados prontos, será realizada a transformação do formato das coordenadas geográficas para SIRGAS 2000, visto que no banco de dados estas estavam no formato WGS84.
+```{r}
+sp::coordinates(pontos) <- ~ coord_x + coord_y
+sp::proj4string(pontos) <- sirgas2000
+pontos <- sp::spTransform(pontos400, wgs84utm22s)
+```
+Para definição do limite da área estudada, iremos carregar o arquivo shapefile do município de Santa Maria/RS. Para isso, usaremos a função raster::shapefile. A função sp::spTransform é usada para projetar as coordenadas original no plano cartesiano (UTM).
+```{r}
+data_folder <- '../data/'
+ext <- c('dbf', 'prj', 'shp', 'shx')
+files <- c(glue('pedologia25.{ext}'), glue('geologia50.{ext}'))
+download <- !all(files %in% list.files(data_folder))
+```
+
+
 
 ```{r, fig.asp= 1}
 wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs') #cria o objeto
