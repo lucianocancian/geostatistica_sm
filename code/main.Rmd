@@ -118,12 +118,18 @@ Para definição do limite da área estudada, iremos carregar o arquivo shapefil
 ```{r}
 data_folder <- '../data/'
 ext <- c('dbf', 'prj', 'shp', 'shx')
-files <- c(glue('pedologia25.{ext}'), glue('geologia50.{ext}'))
-download <- !all(files %in% list.files(data_folder))
+contorno <- c(glue('limite_SM.{ext}')
+```
+Agora podemos carregar o mapa de contorno para o ambiente de trabalho.
+```{r}
+contorno <- 
+  glue('{data_folder}limite_SM.shp') %>% 
+  raster::shapefile(stringsAsFactors = TRUE) %>% 
+  sp::spTransform(wgs84utm22s)
+str(contorno, 2)
 ```
 
-
-
+#testes de argumentos que podem ser usados posteriormente
 ```{r, fig.asp= 1}
 wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs') #cria o objeto
 
