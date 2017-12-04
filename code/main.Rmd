@@ -73,7 +73,17 @@ library(devtools)
 library(rgdal)
 library(sp)
 library(febr)
+library(rgeos)
 ```
+Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além de uma rampa de cores que serão utilizadas na geração dos mapas.
+```{r}
+
+wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
+sirgas2000 <- sp::CRS('+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs')
+
+col_soil_var <- topo.colors(100)
+```
+
 
 Com os pacotes carregados, serão baixados os dados do FEBR para as áreas estudadas. Como a área estudada compreende o município de Santa MAria/RS, serão utilizados três bancos de dados com amostras coletadas em trabalhos realizados no município. São eles: ctb0006, referente ao conjunto de dados do 'Zoneamento edáfico de culturas para o município de Santa Maria - RS, visando o ordenamento territorial'; ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS; e ctb
 
@@ -83,7 +93,7 @@ sm <- febr::observations('ctb0006', which.cols = 'all', progress = FALSE)
 ag <- febr::observations('ctb0031', which.cols = 'all', progress = FALSE) #esta dando erro ao baixar os dados
 ```
 Como os dados provem de diferentes conjuntos de dados, devem ser unidos em uma mesma planilha de dados.
-
+#como tem sibcs 2013 e sibcs 2009 como nome de coluna, como unir??
 ```{r}
 id <- c('dnos', 'sm', recursive = FALSE, use.names=TRUE)
 pontos <- 
@@ -95,7 +105,7 @@ rm(dnos, sm)
 ```
 
 
-Carregados os dados dos três conjuntos, serão agora visualizados os dados de classe de solo de cada um, buscando visualizar inconsistênias ou denominações diferentes às mesmas classes de solo. A fim de facilitar a predição, em um primeiro momento serão utilizadas apenas as informações do segundo nível categorico das classes de solo, conforme o Sistema Brasileiro de Classificação de Solos (SiBCS).
+Carregados os dados dos três conjuntos, serão agora visualizados os dados de classe de solo de cada um, buscando visualizar inconsistências ou denominações diferentes às mesmas classes de solo. A fim de facilitar a predição, em um primeiro momento serão utilizadas apenas as informações do segundo nível categorico das classes de solo, conforme o Sistema Brasileiro de Classificação de Solos (SiBCS).
 
 ```{r, }
 str(sm$taxon_sibcs_2013)
@@ -120,10 +130,10 @@ Para definição do limite da área estudada, iremos carregar o arquivo shapefil
 data_folder <- '../data/'
 contorno <- 
  raster::shapefile('limite.shp',
-                   stringsAsFactors = TRUE, encoding = 'UTF-8') %>%
+  stringsAsFactors = TRUE, encoding = 'UTF-8') %>%
  sp::spTransform(wgs84utm22s)
 
-#criar espaço para figura
+#criar espaço para que a figura seja gerada
 dev.off()
 png("mapa.png")
 
