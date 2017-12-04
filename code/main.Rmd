@@ -53,6 +53,7 @@ Texto. Texto. Texto. Texto. Texto. Texto.
 
 # Referências
 
+
 Definido o modelo do arquivo de texto de saída dos dados, será dado início ao desenvolvimento do projeto. A cada passo, buscarei trazer ao menos uma breve explicação de cada passo.
 
 Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
@@ -97,10 +98,10 @@ rm(dnos, sm)
 Carregados os dados dos três conjuntos, serão agora visualizados os dados de classe de solo de cada um, buscando visualizar inconsistênias ou denominações diferentes às mesmas classes de solo. A fim de facilitar a predição, em um primeiro momento serão utilizadas apenas as informações do segundo nível categorico das classes de solo, conforme o Sistema Brasileiro de Classificação de Solos (SiBCS).
 
 ```{r, }
-str(ctb0003$taxon_sibcs_2013)
-nlevels(a$taxon_sibcs_2013)
-barplot(table(a$taxon_sibcs_2013))
-summary(a$taxon_sibcs_2013)
+str(sm$taxon_sibcs_2013)
+nlevels(sm$taxon_sibcs_2013)
+barplot(table(sm$taxon_sibcs_2013))
+summary(sm$taxon_sibcs_2013)
 ```
 Agora, realiza-se a padronização dos nomes de classes de solo, mantendo até o segundo nível categórico.
 ```{r}
@@ -117,8 +118,17 @@ pontos <- sp::spTransform(pontos400, wgs84utm22s)
 Para definição do limite da área estudada, iremos carregar o arquivo shapefile do município de Santa Maria/RS. Para isso, usaremos a função raster::shapefile. A função sp::spTransform é usada para projetar as coordenadas original no plano cartesiano (UTM).
 ```{r}
 data_folder <- '../data/'
-ext <- c('dbf', 'prj', 'shp', 'shx')
-contorno <- c(glue('limite_SM.{ext}')
+contorno <- 
+ raster::shapefile('limite.shp',
+                   stringsAsFactors = TRUE, encoding = 'UTF-8') %>%
+ sp::spTransform(wgs84utm22s)
+
+#criar espaço para figura
+dev.off()
+png("mapa.png")
+
+sp::spplot(contorno, scales = list(draw = TRUE)
+      
 ```
 Agora podemos carregar o mapa de contorno para o ambiente de trabalho.
 ```{r}
@@ -127,6 +137,24 @@ contorno <-
   raster::shapefile(stringsAsFactors = TRUE) %>% 
   sp::spTransform(wgs84utm22s)
 str(contorno, 2)
+```
+##COMO CRIAR OS VETORES COM OS BINOMIOS?
+
+#teste do pacote geoRglm
+```{r}
+if(!exists(".Random.seed", envir=.GlobalEnv, inherits = FALSE)) set.seed(1234)
+data(b50)
+test <- glsm.mcmc(b50, model = list(family="binomial",
+cov.pars = c(1,1), beta = c(1,0), trend =~ rnorm(50),
+cov.model="spherical", nugget=0.3),
+mcmc.input = mcmc.control(S.scale = 0.2, thin = 1))
+## visulalising the MCMC output using the coda package
+test.coda <- create.mcmc.coda(test, mcmc.input = list(thin = 1))
+library(coda)
+## Not run:
+plot(test.coda)
+autocorr.plot(test.coda)
+## End(Not run)
 ```
 
 #testes de argumentos que podem ser usados posteriormente
