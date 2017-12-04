@@ -28,3 +28,124 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+#Modelagem geoestatística do conteúdo de argila da bacia do DNOS
+
+#Parte I - Modelagem clássica
+
+Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
+```{r}
+install.packages("mapview")
+install.packages("devtools")
+devtools::install_github("samuel-rosa/febr-package", force=TRUE)
+install.packages("magrittr")
+install.packages("dplyr")
+install.packages("glue")
+install.packages("lattice")
+install.packages("latticeExtra")
+install.packages("georob")
+install.packages("sp")
+install.packages("rgdal")
+```
+
+Após os pacotes serem instalados, devem ser carregados (a partir do comando library)
+```{r}
+library(mapview)
+library(devtools)
+library(febr)
+library(magrittr)
+library(dplyr)
+library(glue)
+library(lattice)
+library(latticeExtra)
+library(georob)
+library(sp)
+library(rgdal)
+```
+Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além de uma rampa de cores que serão utilizadas na geração dos mapas.
+```{r}
+
+wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
+sirgas2000 <- sp::CRS('+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs')
+
+col_soil_var <- topo.colors(100)
+```
+
+Com os pacotes carregados, serão baixados os dados do FEBR para a área estudada. Primeiramente serão descarregados os arquivos do mapa pedológico para a área estudada.
+```{r}
+data_folder <- '../data/'
+ext <- c('dbf', 'prj', 'shp', 'shx')
+files <- (glue('pedologia25.{ext}'))
+download <- !all(files %in% list.files(data_folder))
+if (download) {
+  url <- 'https://github.com/samuel-rosa/UFSM-SOL-843/tree/master/data/'
+  url <- glue('{url}{files}')
+  destfile <- glue('{data_folder}{files}')
+  for (i in 1:length(files)) {
+    download.file(url = url[i], destfile = destfile[i])
+  }
+}
+
+```
+
+```{r}
+pedologia25 <- 
+  glue('C:/Users/lucia/OneDrive/DOUTORADO/Geostat/git/aula1/data/dados_dnos/pedologia25.shp') %>% 
+  raster::shapefile(stringsAsFactors = TRUE) %>% 
+  sp::spTransform(wgs84utm22s)
+col_soil_um <- terrain.colors(nlevels(pedologia25$um))
+str(pedologia25)
+pedologia25@data
+
+########################################################
+#criar espaço para figura
+dev.off()
+png("mapa.png")
+
+sp::spplot(pedologia25, scales = list(draw = TRUE), col.regions = terrain.colors(nlevels($SitioC)), main = "Mapa Pedológico")
+
+#criar espaço para figura
+dev.off()
+png("mapa.png")
+
+sp::spplot(sitio, scales = list(draw = TRUE), col.regions = terrain.colors(nlevels(sitio$SitioC)), main = "Mapa Pedológico")
+##########################################################3
+```
+
+
+
+Será descarregado da base de dados do FEBR o conjunto de dados ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS.
+
+```{r}
+#pontos400_0 = dnos_observations e pontos400_l = dnos_layers
+#pontos 400 = dnos
+
+dnos_observations <- febr::observations('ctb0003', which.cols = 'all', progress = FALSE)
+dnos_layers <- febr::layers('ctb0003', which.cols = 'all', missing.data = 'keep', progress = FALSE)
+
+id <- c('dataset_id', 'observacao_id')
+dnos <- 
+  merge(dnos_observations, dnos_layers, by.x = id, by.y = id) %>% 
+  select(observacao_id, coord_x, coord_y, taxon_sibcs_2009, ca_kcl_aas, argila_, areia_)
+rm(dnos_layers, dnos_observations)
+sp::coordinates(dnos) <- ~ coord_x + coord_y
+sp::proj4string(dnos) <- sirgas2000
+dnos <- sp::spTransform(dnos, wgs84utm22s)
+
+dnos$um <- sp::over(x = dnos, y = pedologia25) %>% unlist()
+
+dnos_in <- dnos[!is.na(dnos$um), ]
+```
+
+```{r}
+sp::spplot(
+  pedologia25, col.regions = col_soil_um, alpha.regions = 0.3, colorkey = FALSE) +
+  latticeExtra::as.layer(
+    lattice::xyplot(coord_y ~ coord_x, data = as.data.frame(dnos_in@coords), col = 'blue', pch = 16))
+```
+
+```{r}
+lm_fit <- lm(argila_ ~ um, dnos_in)
+summary(lm_fit)
+```
+
