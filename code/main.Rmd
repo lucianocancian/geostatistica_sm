@@ -1,184 +1,30 @@
 ---
-title: "Arquivo de desenvolvimento"
-author: "LucianoCancian"
-date: "1 de novembro de 2017"
-output:
-  bookdown::word_document2:
-    reference_docx: ../docs/template.docx
-bibliography: biblio.bib
-csl: abnt.csl
-
-lang: pt
+title: "argila_dnos"
+author: "LC"
+date: "4 de dezembro de 2017"
+output: html_document
 ---
-
-Mover o arquivo word dentro da pasta docs
-
-```{r, eval=FALSE, echo=FALSE}
-rmarkdown::render("main.Rmd", encoding = "UTF-8", output_dir = "../docs")
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Introdução
+## R Markdown
 
-Aqui será iniciada a introdução
-Texto de exemplo
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-Texto de exemplo conforme [@AngeliniEtAl2017] ou @AngeliniEtAl2017 e @KhoshgoftarmaneshEtAl2018
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-Texto de exemplo
-
-Texto de exemplo
-
-# Material e Métodos
-
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-
-## Dados do Solo
-
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-Texto. Texto. Texto. Texto. Texto. Texto.
-
-# Referências
-
-
-Definido o modelo do arquivo de texto de saída dos dados, será dado início ao desenvolvimento do projeto. A cada passo, buscarei trazer ao menos uma breve explicação de cada passo.
-
-Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
-```{r}
-install.packages("mapview")
-install.packages("devtools")
-installed.packages("rgdal")
-install.packages("sp")
-devtools::install_github("samuel-rosa/febr-package")
-
+```{r cars}
+summary(cars)
 ```
 
-Após os pacotes serem instalados, devem ser carregados (a partir do comando library)
-```{r}
-library(mapview)
-library(devtools)
-library(rgdal)
-library(sp)
-library(febr)
-library(rgeos)
-```
-Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além de uma rampa de cores que serão utilizadas na geração dos mapas.
-```{r}
+## Including Plots
 
-wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
-sirgas2000 <- sp::CRS('+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs')
+You can also embed plots, for example:
 
-col_soil_var <- topo.colors(100)
+```{r pressure, echo=FALSE}
+plot(pressure)
 ```
 
-
-Com os pacotes carregados, serão baixados os dados do FEBR para as áreas estudadas. Como a área estudada compreende o município de Santa MAria/RS, serão utilizados três bancos de dados com amostras coletadas em trabalhos realizados no município. São eles: ctb0006, referente ao conjunto de dados do 'Zoneamento edáfico de culturas para o município de Santa Maria - RS, visando o ordenamento territorial'; ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS; e ctb
-
-```{r}
-dnos <- febr::observations('ctb0003', which.cols = 'all', progress = FALSE)
-sm <- febr::observations('ctb0006', which.cols = 'all', progress = FALSE)
-ag <- febr::observations('ctb0031', which.cols = 'all', progress = FALSE) #esta dando erro ao baixar os dados
-```
-Como os dados provem de diferentes conjuntos de dados, devem ser unidos em uma mesma planilha de dados.
-#como tem sibcs 2013 e sibcs 2009 como nome de coluna, como unir??
-```{r}
-id <- c('dnos', 'sm', recursive = FALSE, use.names=TRUE)
-pontos <- 
-  merge(dnos, sm, by.x = id, by.y = id) %>% 
-  select(observacao_id, coord_x, coord_y, taxon_sibcs_2009, taxon_sibcs_2013)
-#esta dando erro...
-
-rm(dnos, sm)
-```
-
-
-Carregados os dados dos três conjuntos, serão agora visualizados os dados de classe de solo de cada um, buscando visualizar inconsistências ou denominações diferentes às mesmas classes de solo. A fim de facilitar a predição, em um primeiro momento serão utilizadas apenas as informações do segundo nível categorico das classes de solo, conforme o Sistema Brasileiro de Classificação de Solos (SiBCS).
-
-```{r, }
-str(sm$taxon_sibcs_2013)
-nlevels(sm$taxon_sibcs_2013)
-barplot(table(sm$taxon_sibcs_2013))
-summary(sm$taxon_sibcs_2013)
-```
-Agora, realiza-se a padronização dos nomes de classes de solo, mantendo até o segundo nível categórico.
-```{r}
-#padronizar a planilha
-```
-
-
-Com os dados prontos, será realizada a transformação do formato das coordenadas geográficas para SIRGAS 2000, visto que no banco de dados estas estavam no formato WGS84.
-```{r}
-sp::coordinates(pontos) <- ~ coord_x + coord_y
-sp::proj4string(pontos) <- sirgas2000
-pontos <- sp::spTransform(pontos400, wgs84utm22s)
-```
-Para definição do limite da área estudada, iremos carregar o arquivo shapefile do município de Santa Maria/RS. Para isso, usaremos a função raster::shapefile. A função sp::spTransform é usada para projetar as coordenadas original no plano cartesiano (UTM).
-```{r}
-data_folder <- '../data/'
-contorno <- 
- raster::shapefile('limite.shp',
-  stringsAsFactors = TRUE, encoding = 'UTF-8') %>%
- sp::spTransform(wgs84utm22s)
-
-#criar espaço para que a figura seja gerada
-dev.off()
-png("mapa.png")
-
-sp::spplot(contorno, scales = list(draw = TRUE)
-      
-```
-Agora podemos carregar o mapa de contorno para o ambiente de trabalho.
-```{r}
-contorno <- 
-  glue('{data_folder}limite_SM.shp') %>% 
-  raster::shapefile(stringsAsFactors = TRUE) %>% 
-  sp::spTransform(wgs84utm22s)
-str(contorno, 2)
-```
-##COMO CRIAR OS VETORES COM OS BINOMIOS?
-
-#teste do pacote geoRglm
-```{r}
-if(!exists(".Random.seed", envir=.GlobalEnv, inherits = FALSE)) set.seed(1234)
-data(b50)
-test <- glsm.mcmc(b50, model = list(family="binomial",
-cov.pars = c(1,1), beta = c(1,0), trend =~ rnorm(50),
-cov.model="spherical", nugget=0.3),
-mcmc.input = mcmc.control(S.scale = 0.2, thin = 1))
-## visulalising the MCMC output using the coda package
-test.coda <- create.mcmc.coda(test, mcmc.input = list(thin = 1))
-library(coda)
-## Not run:
-plot(test.coda)
-autocorr.plot(test.coda)
-## End(Not run)
-```
-
-#testes de argumentos que podem ser usados posteriormente
-```{r, fig.asp= 1}
-wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs') #cria o objeto
-
-
-#rampa de cores
-col_soil_var <- topo.colors(100)
-
-sp::coordinates(dados_ag) <- c("X" , "Y")
-sp::proj4string(dados_ag) <- wgs84utm22s 
-dados_ag <- sp::spTransform(dados_ag, wgs84utm22s)
-
-plot(Y~X, dados_ag)
-mapview(dados_ag)
-```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
