@@ -31,8 +31,7 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 
 #Modelagem geoestatística do conteúdo de argila da bacia do DNOS
 
-#Parte I - Modelagem clássica 
-########partindo da aula 3
+
 
 Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
 ```{r}
@@ -121,14 +120,20 @@ dnos <- sp::spTransform(dnos, wgs84utm22s)
 dnos$um <- sp::over(x = dnos, y = pedologia25) %>% unlist()
 
 dnos_in <- dnos[!is.na(dnos$um), ]
-```
+dmax <- max(dist(dnos_in@coords))/2 #foi calculada a distancia maxima, para posteriormente ser usada no limite dos residuos do semivariograma
 
-```{r}
+```
+Mapa com a localização dos pontos amostrais distribuidos sobre o mapa pedológico da área.
+```{r plot do mapa pedologico}
 sp::spplot(
   pedologia25, col.regions = col_soil_um, alpha.regions = 0.3, colorkey = FALSE) +
   latticeExtra::as.layer(
     lattice::xyplot(coord_y ~ coord_x, data = as.data.frame(dnos_in@coords), col = 'blue', pch = 16))
 ```
+
+#Parte I - Modelagem clássica 
+
+A partir dos dados carregados, começa a predição pelo modelo clássico, determinando o conteúdo de argila única e exclusivamente como função do mapa pedológico, utilizando média por classe usando modelo linear simples.
 
 ```{r}
 lm_fit <- lm(argila_ ~ um, dnos_in)
@@ -136,38 +141,29 @@ summary(lm_fit)
 ```
 
 ```{r}
-op <- par(mfrow = c(2, 2))
-plot(lm_fit, which = 1:4, cex = 1.5, lwd = 1.5)
-par(op)
-```
-
-
-```{r}
-limites <- seq(0, 2000, length.out = 15)
-rstandard(lm_fit) %>% 
+limites <- seq(0, dmax, length.out = 15)
+residuals(lm_fit) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites,
     xy.angle.def = c(0, 22.5, 67.5, 112.5, 157.5, 180)) %>% 
   plot(type = "b", ylab = 'Semivariância', xlab = 'Distância de separação (km)', cex = 1.0, lwd = 1.0)
 ```
 
-```{r}
-variogram_lm <- 
-  rstandard(lm_fit) %>% 
-  georob::sample.variogram(
-    locations = dnos_in@coords, lag.dist.def = limites)
-vario_fit <- 
-  georob::fit.variogram.model(
-  variogram_lm, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 1200, scale = 500), 
-  weighting.method = "cressie", method = "BFGS")
-```
+
 
 ```{r}
 plot(variogram_lm, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
 lines(vario_fit, col = "red", lty = 'dashed', lwd = 1.5)
 ```
-##########COMO FAZER A PREDIÇÃO???????????
-prediçao do lm pelo rm nugget ao invés do RMexp
+
+#testar com o gstat
+#ou predizer diretamente pelo lm_fit, sem o nugget
+
+
+
+
+
+
 
 
 
@@ -258,3 +254,19 @@ summary(validacao)
 plot(validacao)
 ```
 
+
+
+
+
+
+parte da geração do semivariograma pelo modelo linear, que não foi usada pelo fato do georob nao aceitar o modelo nugget
+```{r}
+variogram_lm <- 
+  residuals(lm_fit) %>% 
+  georob::sample.variogram(
+    locations = dnos_in@coords, lag.dist.def = limites)
+vario_fit <- 
+  georob::fit.variogram.model(
+  variogram_lm, variogram.model = 'RMnugget', param = c(variance = var(lm_fit$residuals)))
+
+```
