@@ -31,7 +31,8 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 
 #Modelagem geoestatística do conteúdo de argila da bacia do DNOS
 
-#Parte I - Modelagem clássica
+#Parte I - Modelagem clássica 
+########partindo da aula 3
 
 Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
 ```{r}
@@ -112,8 +113,6 @@ sp::spplot(sitio, scales = list(draw = TRUE), col.regions = terrain.colors(nleve
 ##########################################################3
 ```
 
-
-
 Será descarregado da base de dados do FEBR o conjunto de dados ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS.
 
 ```{r}
@@ -147,5 +146,120 @@ sp::spplot(
 ```{r}
 lm_fit <- lm(argila_ ~ um, dnos_in)
 summary(lm_fit)
+```
+
+```{r}
+op <- par(mfrow = c(2, 2))
+plot(lm_fit, which = 1:4, cex = 1.5, lwd = 1.5)
+par(op)
+```
+
+```{r}
+limites <- seq(0, 1500, length.out = 15)
+residuals(lm_fit) %>% 
+  georob::sample.variogram(
+    locations = dnos_in@coords, lag.dist.def = limites,
+    xy.angle.def = c(0, 22.5, 67.5, 112.5, 157.5, 180)) %>% 
+  plot(type = "b", ylab = 'Semivariância', xlab = 'Distância de separação (km)', cex = 1.5, lwd = 1.5)
+```
+
+```{r}
+variogram_lm <- 
+  residuals(lm_fit) %>% 
+  georob::sample.variogram(
+    locations = dnos_in@coords, lag.dist.def = limites)
+vario_fit <- 
+  georob::fit.variogram.model(
+  variogram_lm, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 2000, scale = 500), 
+  weighting.method = "cressie", method = "BFGS")
+```
+
+```{r}
+plot(variogram_lm, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
+lines(vario_fit, col = "red", lty = 'dashed', lwd = 1.5)
+```
+
+#como realizar a prediçao por lm?????????????????
+
+
+
+
+
+
+
+#Parte II - Modelagem puramente espacial
+Predição do conteúdo de argila no solo na bacia do DNOS usando apenas krigagem ordinária.
+
+```{r}
+lm_fit <- lm(argila_ ~ 1, dnos_in) #esta correto o 1??????????????????????
+summary(lm_fit)
+```
+
+```{r}
+limites <- seq(0, 1500, length.out = 15)
+residuals(lm_fit) %>% 
+  georob::sample.variogram(
+    locations = dnos_in@coords, lag.dist.def = limites,
+    xy.angle.def = c(0, 22.5, 67.5, 112.5, 157.5, 180)) %>% 
+  plot(type = "b", ylab = 'Semivariância', xlab = 'Distância de separação (km)')
+```
+
+```{r}
+vario <- 
+  residuals(lm_fit) %>% 
+  georob::sample.variogram(
+    locations = dnos_in@coords, lag.dist.def = limites)
+vario_fit <- 
+  georob::fit.variogram.model(
+  vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 2000, scale = 500), 
+  weighting.method = "cressie", method = "BFGS")
+```
+
+```{r}
+reml_fit <- georob::georob(
+  argila_ ~ 1, dnos_in, locations = ~ coord_x + coord_y, 
+  variogram.model = 'RMexp', 
+  param = c(variance = vario_fit$variogram.object[[1]]$param[['variance']], 
+            nugget = vario_fit$variogram.object[[1]]$param[['nugget']], 
+            scale = vario_fit$variogram.object[[1]]$param[['scale']]),
+  tuning.psi = 1000, control = georob::control.georob(initial.fixef = 'lm'))
+summary(reml_fit)
+```
+
+```{r}
+plot(vario, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
+lines(vario_fit, col = "red", lty = 'dashed')
+lines(reml_fit, col = "blue", lty = 'dashed')
+```
+
+```{r}
+colnames(grid@coords) <- colnames(dnos_in@coords)
+pred_ponto <- predict(
+  reml_fit, newdata = grid, type = 'signal', signif = 0.95,
+  control = georob::control.predict.georob(extended.output = TRUE))
+sp::gridded(pred_ponto) <- TRUE
+str(pred_ponto)
+```
+
+```{r}
+at <- pred_ponto@data[, c("pred", "lower", "upper")] %>% range()
+at <- seq(at[1], at[2], length.out = 20)
+sp::spplot(pred_ponto, zcol = c("lower", "pred", "upper"), at = at, main = "prediction")
+```
+
+```{r}
+sp::spplot(pred_ponto, zcol = 'se')
+```
+
+```{r}
+validacao <- georob::cv(reml_fit, nset = 375)
+summary(validacao)
+```
+
+```{r}
+1 - sum((validacao$pred$data - validacao$pred$pred)^2) / 
+  sum((validacao$pred$data - mean(validacao$pred$data))^2)
+
+plot(validacao)
 ```
 
