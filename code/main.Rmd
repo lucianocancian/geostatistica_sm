@@ -98,19 +98,6 @@ col_soil_um <- terrain.colors(nlevels(pedologia25$um))
 str(pedologia25)
 pedologia25@data
 
-########################################################
-#criar espaço para figura
-dev.off()
-png("mapa.png")
-
-sp::spplot(pedologia25, scales = list(draw = TRUE), col.regions = terrain.colors(nlevels($SitioC)), main = "Mapa Pedológico")
-
-#criar espaço para figura
-dev.off()
-png("mapa.png")
-
-sp::spplot(sitio, scales = list(draw = TRUE), col.regions = terrain.colors(nlevels(sitio$SitioC)), main = "Mapa Pedológico")
-##########################################################3
 ```
 
 Será descarregado da base de dados do FEBR o conjunto de dados ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS.
@@ -154,23 +141,24 @@ plot(lm_fit, which = 1:4, cex = 1.5, lwd = 1.5)
 par(op)
 ```
 
+
 ```{r}
-limites <- seq(0, 1500, length.out = 15)
-residuals(lm_fit) %>% 
+limites <- seq(0, 2000, length.out = 15)
+rstandard(lm_fit) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites,
     xy.angle.def = c(0, 22.5, 67.5, 112.5, 157.5, 180)) %>% 
-  plot(type = "b", ylab = 'Semivariância', xlab = 'Distância de separação (km)', cex = 1.5, lwd = 1.5)
+  plot(type = "b", ylab = 'Semivariância', xlab = 'Distância de separação (km)', cex = 1.0, lwd = 1.0)
 ```
 
 ```{r}
 variogram_lm <- 
-  residuals(lm_fit) %>% 
+  rstandard(lm_fit) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites)
 vario_fit <- 
   georob::fit.variogram.model(
-  variogram_lm, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 2000, scale = 500), 
+  variogram_lm, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 1200, scale = 500), 
   weighting.method = "cressie", method = "BFGS")
 ```
 
@@ -178,10 +166,8 @@ vario_fit <-
 plot(variogram_lm, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
 lines(vario_fit, col = "red", lty = 'dashed', lwd = 1.5)
 ```
-
-#como realizar a prediçao por lm?????????????????
-
-
+##########COMO FAZER A PREDIÇÃO???????????
+prediçao do lm pelo rm nugget ao invés do RMexp
 
 
 
@@ -191,13 +177,13 @@ lines(vario_fit, col = "red", lty = 'dashed', lwd = 1.5)
 Predição do conteúdo de argila no solo na bacia do DNOS usando apenas krigagem ordinária.
 
 ```{r}
-lm_fit <- lm(argila_ ~ 1, dnos_in) #esta correto o 1??????????????????????
+lm_fit <- lm(argila_ ~ 1, dnos_in)
 summary(lm_fit)
 ```
 
 ```{r}
-limites <- seq(0, 1500, length.out = 15)
-residuals(lm_fit) %>% 
+limites <- seq(0, 1800, length.out = 15)
+rstandard(lm_fit) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites,
     xy.angle.def = c(0, 22.5, 67.5, 112.5, 157.5, 180)) %>% 
@@ -206,12 +192,12 @@ residuals(lm_fit) %>%
 
 ```{r}
 vario <- 
-  residuals(lm_fit) %>% 
+  rstandard(lm_fit) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites)
 vario_fit <- 
   georob::fit.variogram.model(
-  vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 2000, scale = 500), 
+  vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 1000, scale = 200), 
   weighting.method = "cressie", method = "BFGS")
 ```
 
@@ -229,10 +215,17 @@ summary(reml_fit)
 ```{r}
 plot(vario, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
 lines(vario_fit, col = "red", lty = 'dashed')
-lines(reml_fit, col = "blue", lty = 'dashed')
 ```
 
 ```{r}
+grid <- sp::spsample(dnos_in, 10000, type = 'regular')
+
+```
+
+
+```{r}
+str(dnos_in)
+
 colnames(grid@coords) <- colnames(dnos_in@coords)
 pred_ponto <- predict(
   reml_fit, newdata = grid, type = 'signal', signif = 0.95,
@@ -250,6 +243,8 @@ sp::spplot(pred_ponto, zcol = c("lower", "pred", "upper"), at = at, main = "pred
 ```{r}
 sp::spplot(pred_ponto, zcol = 'se')
 ```
+
+Validação cruzada do modelo utilizando apenas krigagem ordinária.
 
 ```{r}
 validacao <- georob::cv(reml_fit, nset = 375)
