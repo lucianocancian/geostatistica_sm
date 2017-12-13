@@ -49,6 +49,8 @@ install.packages("latticeExtra")
 install.packages("georob")
 install.packages("sp")
 install.packages("rgdal")
+install.packages("raster", dependencies = TRUE)
+install.packages("caret", dependencies = TRUE)
 ```
 
 Após os pacotes serem instalados, devem ser carregados (a partir do comando library)
@@ -64,6 +66,8 @@ library(latticeExtra)
 library(georob)
 library(sp)
 library(rgdal)
+require(raster)
+library(caret)
 ```
 
 Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além de uma rampa de cores que serão utilizadas na geração dos mapas.
@@ -308,7 +312,7 @@ vario <-
     locations = dnos_in@coords, lag.dist.def = limites)
 vario_fit <- 
   georob::fit.variogram.model(
-  vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 1000, scale = 200), 
+  vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 900, scale = 200), 
   weighting.method = "cressie", method = "BFGS")
 ```
 
@@ -325,7 +329,6 @@ summary(reml_ku)
 
 ```{r}
 plot(vario, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
-lines(vario, col = "red", lty = 'dashed')
 lines(vario_fit, col = "blue", lty = 'dashed')
 ```
 
@@ -359,15 +362,15 @@ sp::spplot(pred_ku, zcol = 'se')
 Validação cruzada do modelo utilizando apenas krigagem ordinária.
 
 ```{r}
-validacao <- georob::cv(reml_ku, nset = 375)
-summary(validacao)
+validacao_ku <- georob::cv(reml_ku, nset = 375)
+summary(validacao_ku)
 ```
 
 ```{r}
-1 - sum((validacao$pred$data - validacao$pred$pred)^2) / 
-  sum((validacao$pred$data - mean(validacao$pred$data))^2)
+1 - sum((validacao_ku$pred$data - validacao_ku$pred$pred)^2) / 
+  sum((validacao_ku$pred$data - mean(validacao_ku$pred$data))^2)
 
-plot(validacao)
+plot(validacao_ku)
 ```
 
 
