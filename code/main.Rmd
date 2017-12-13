@@ -314,6 +314,7 @@ vario_fit <-
   georob::fit.variogram.model(
   vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 900, scale = 200), 
   weighting.method = "cressie", method = "BFGS")
+summary(vario_fit)
 ```
 
 ```{r}
@@ -373,6 +374,30 @@ summary(validacao_ku)
 plot(validacao_ku)
 ```
 
+# Incerteza
+```{r}
+# Conditional simulation
+cond_sim_ku <- gstat::krige(argila_ ~ um, dnos_in, grid, model = m_exp, nmax = 15, nsim = 8)
+gridded(cond_sim_ku) <- TRUE
+spplot(cond_sim_ku)
+```
+
+```{r}
+# Unconditional simulation
+beta_ku <- lm(argila_ ~ um, dnos_in@data) %>% coef()
+g_ku <- gstat::gstat(formula = z ~ um, dummy = TRUE, model = m_exp, nmax = 15, beta = beta)
+uncond_sim_ku <- predict(g_ku, grid, nsim = 8)
+gridded(uncond_sim_ku) <- TRUE
+spplot(uncond_sim_ku)
+```
+
+```{r}
+uncond_sim_prop_ku <- 
+  calc(stack(uncond_sim_ku), function (x) x > 500) %>% 
+  calc(sum) %>% 
+  calc(function (x) x / 8)
+plot(uncond_sim_prop, asp = 1)
+```
 
 
 #Parte iv
