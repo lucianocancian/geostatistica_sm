@@ -289,6 +289,31 @@ summary(validacao)
 plot(validacao)
 ```
 
+
+```{r}
+# Incerteza
+cond_sim_ko <- gstat::krige(argila_ ~ 1, dnos_in, grid, model = m_exp, nmax = 15, nsim = 8)
+gridded(cond_sim_ko) <- TRUE
+spplot(cond_sim_ko)
+```
+
+```{r}
+beta_ko <- lm(argila_ ~ 1, dnos_in@data) %>% coef()
+g_ko <- gstat::gstat(formula = z ~ 1, dummy = TRUE, model = m_exp, nmax = 15, beta = beta)
+uncond_sim_ko <- predict(g_ko, grid, nsim = 8)
+gridded(uncond_sim_ko) <- TRUE
+spplot(uncond_sim_ko)
+```
+
+```{r}
+uncond_sim_prop_ko <- 
+  calc(stack(uncond_sim_ko), function (x) x > 500) %>% 
+  calc(sum) %>% 
+  calc(function (x) x / 8)
+plot(uncond_sim_prop_ko, asp = 1)
+```
+
+
 #Parte III - Modelagem espacial, fazendo uso de krigagem universal utilizando o mapa pedológico como covariável.
 
 ```{r}
@@ -374,16 +399,15 @@ summary(validacao_ku)
 plot(validacao_ku)
 ```
 
-# Incerteza
+
 ```{r}
-# Conditional simulation
+# Incerteza
 cond_sim_ku <- gstat::krige(argila_ ~ um, dnos_in, grid, model = m_exp, nmax = 15, nsim = 8)
 gridded(cond_sim_ku) <- TRUE
 spplot(cond_sim_ku)
 ```
 
 ```{r}
-# Unconditional simulation
 beta_ku <- lm(argila_ ~ um, dnos_in@data) %>% coef()
 g_ku <- gstat::gstat(formula = z ~ um, dummy = TRUE, model = m_exp, nmax = 15, beta = beta)
 uncond_sim_ku <- predict(g_ku, grid, nsim = 8)
@@ -396,7 +420,7 @@ uncond_sim_prop_ku <-
   calc(stack(uncond_sim_ku), function (x) x > 500) %>% 
   calc(sum) %>% 
   calc(function (x) x / 8)
-plot(uncond_sim_prop, asp = 1)
+plot(uncond_sim_prop_ku, asp = 1)
 ```
 
 
