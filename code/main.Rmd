@@ -44,6 +44,7 @@ library(rgdal)
 require(raster)
 library(caret)
 library(bookdown)
+library(gstat)
 ```
 
 Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além de uma rampa de cores que serão utilizadas na geração dos mapas.
@@ -265,8 +266,6 @@ summary(validacao)
 plot(validacao)
 ```
 
-#PARTE 2
-
 ```{r}
 # Condicional simulation 
 m_exp_ko <- coef(reml_fit_ko, what = 'variogram')
@@ -336,7 +335,7 @@ plot(vario_ku)
 ```{r}
 vario_fit_ku <- 
   georob::fit.variogram.model(
-  vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 900, scale = 200), 
+  vario_ku, variogram.model = 'RMexp', param = c(variance = 4000, nugget = 1000, scale = 200), 
   weighting.method = "cressie", method = "BFGS")
 summary(vario_fit_ku)
 ```
@@ -365,7 +364,6 @@ grid <-
     data = data.frame(
       um = sp::over(grid, pedologia25) %>% unlist()),
     proj4string = grid@proj4string)
-str(grid)
 ```
 
 
@@ -401,28 +399,46 @@ plot(validacao_ku)
 
 
 ```{r}
-# Incerteza
-cond_sim_ku <- gstat::krige(argila_ ~ um, dnos_in, grid, model = m_exp, nmax = 15, nsim = 8)
+# Condicional simulation 
+m_exp_ku <- coef(vario_fit_ku, what = 'variogram')
+m_exp_ku <- vgm(psill = 5900, model = 'Exp', range = 1200, nugget = 800)
+cond_sim_ku <- gstat::krige(
+ argila_ ~ um, locations = dnos_in, newdata = grid, model = m_exp_ku, nmax = 15, nsim = 8)
 gridded(cond_sim_ku) <- TRUE
 spplot(cond_sim_ku)
 ```
 
 ```{r}
-beta_ku <- lm(argila_ ~ um, dnos_in@data) %>% coef()
-g_ku <- gstat::gstat(formula = z ~ um, dummy = TRUE, model = m_exp, nmax = 15, beta = beta)
-uncond_sim_ku <- predict(g_ku, grid, nsim = 8)
+# uncondicional simulation 
+
+beta <- mean(dnos_in$argila_)
+m_exp_ku <- coef(vario_fit_ko, what = 'variogram')
+m_exp_ku <- vgm(psill = 5900, model = 'Exp', range = 1200, nugget = 800)
+g_ku <- gstat::gstat(formula = z ~ um, dummy = TRUE, model = m_exp_ku, nmax = 15, beta = beta)
+uncond_sim_ku <- predict(g_ku, newdata = grid, nsim = 8)
 gridded(uncond_sim_ku) <- TRUE
 spplot(uncond_sim_ku)
 ```
 
 ```{r}
-uncond_sim_prop_ku <- 
-  calc(stack(uncond_sim_ku), function (x) x > 50) %>% 
-  calc(sum) %>% 
-  calc(function (x) x / 8)
+# uncondicional simulation 
+
+uncond_sim_prop_ku <-
+  raster::calc(stack(uncond_sim_ku), function (x) x > 250) %>%
+  calc(sum) %>%
+calc(function(x) x / 8)
 plot(uncond_sim_prop_ku, asp = 1)
 ```
 
+```{r}
+# condicional simulation 
+
+cond_sim_prop_ku <-
+  raster::calc(stack(cond_sim_ku), function (x) x > 250) %>%
+  calc(sum) %>%
+calc(function(x) x / 8)
+plot(cond_sim_prop_ku, asp = 1)
+```
 
 
 #Parte iv
