@@ -2,56 +2,31 @@
 title: "argila_dnos"
 author: "LC"
 date: "4 de dezembro de 2017"
-output: html_document
+output:
+  bookdown::word_document2:
+    reference_docx: ../docs/template.docx
+bibliography: biblio.bib
+csl: abnt.csl
+
+lang: pt
+---
+
+Mover o arquivo word dentro da pasta docs
+
+```{r, eval=FALSE, echo=FALSE}
+rmarkdown::render("main.Rmd", encoding = "UTF-8", output_dir = "../docs")
+```
+
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-
-
 #Modelagem geoestatística do conteúdo de argila da bacia do DNOS
 
 
 
 Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, utiliza-se o comando devtools::install_github
-
-```{r}
-install.packages("mapview")
-install.packages("devtools")
-devtools::install_github("febr-team/febr-package", dependencies=TRUE)
-install.packages("magrittr")
-install.packages("dplyr")
-install.packages("glue")
-install.packages("lattice")
-install.packages("latticeExtra")
-install.packages("georob")
-install.packages("sp")
-install.packages("rgdal")
-install.packages("raster", dependencies = TRUE)
-install.packages("caret", dependencies = TRUE)
-```
 
 Após os pacotes serem instalados, devem ser carregados (a partir do comando library)
 ```{r}
@@ -68,6 +43,7 @@ library(sp)
 library(rgdal)
 require(raster)
 library(caret)
+library(bookdown)
 ```
 
 Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além de uma rampa de cores que serão utilizadas na geração dos mapas.
@@ -102,7 +78,6 @@ pedologia25 <-
   raster::shapefile(stringsAsFactors = TRUE, encoding = 'UTF-8') %>% 
   sp::spTransform(wgs84utm22s)
 
-str(pedologia25)
 pedologia25@data
 
 col_soil_um <- terrain.colors(nlevels(pedologia25$um))
@@ -162,14 +137,13 @@ residuals(lm_fit) %>%
 
 ```{r}
 grid <- sp::spsample(dnos_in, 10000, type = 'regular')
-
 ```
 
 
 ```{r}
 colnames(grid@coords) <- colnames(dnos_in@coords)
 pred_linear <- predict(
-  lm_fit, newdata = grid, type = 'signal', signif = 0.95,
+  argila, newdata = grid, type = 'signal', signif = 0.95, na.action = na.omit,
   control = georob::control.predict.georob(extended.output = TRUE))
 sp::gridded(pred_linear) <- TRUE
 str(pred_linear)
@@ -201,7 +175,7 @@ plot(validacao)
 ```
 
 
-
+train
 
 
 #Parte II - Modelagem puramente espacial
@@ -213,7 +187,7 @@ summary(ko)
 ```
 
 ```{r}
-limites <- seq(0, 1500, length.out = 15)
+limites <- seq(0, 1500, length.out = 20)
 residuals(ko) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites,
@@ -222,30 +196,34 @@ residuals(ko) %>%
 ```
 
 ```{r}
-vario <- 
+vario_ko <- 
   residuals(ko) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites)
-vario_fit <- 
+plot(vario_ko)
+```
+
+```{r}
+vario_fit_ko <- 
   georob::fit.variogram.model(
-  vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 1000, scale = 200), 
+  vario_ko, variogram.model = 'RMexp', param = c(variance = 5500, nugget = 500, scale = 200), 
   weighting.method = "cressie", method = "BFGS")
 ```
 
 ```{r}
-reml_fit <- georob::georob(
-  argila_ ~ 1, dnos_in, locations = ~ coord_x + coord_y, 
-  variogram.model = 'RMexp', 
-  param = c(variance = vario_fit$variogram.object[[1]]$param[['variance']], 
-            nugget = vario_fit$variogram.object[[1]]$param[['nugget']], 
-            scale = vario_fit$variogram.object[[1]]$param[['scale']]),
-  tuning.psi = 1000, control = georob::control.georob(initial.fixef = 'lm'))
-summary(reml_fit)
+plot(vario_ko, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
+lines(vario_fit_ko, col = "blue", lty = 'dashed')
 ```
 
 ```{r}
-plot(vario, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
-lines(vario_fit, col = "red", lty = 'dashed')
+reml_fit_ko <- georob::georob(
+  argila_ ~ 1, dnos_in, locations = ~ coord_x + coord_y, 
+  variogram.model = 'RMexp', 
+  param = c(variance = vario_fit_ko$variogram.object[[1]]$param[['variance']], 
+            nugget = vario_fit_ko$variogram.object[[1]]$param[['nugget']], 
+            scale = vario_fit_ko$variogram.object[[1]]$param[['scale']]),
+  tuning.psi = 1000, control = georob::control.georob(initial.fixef = 'lm'))
+summary(reml_fit_ko)
 ```
 
 ```{r}
@@ -256,7 +234,7 @@ grid <- sp::spsample(dnos_in, 10000, type = 'regular')
 ```{r}
 colnames(grid@coords) <- colnames(dnos_in@coords)
 pred_ponto <- predict(
-  reml_fit, newdata = grid, type = 'signal', signif = 0.95,
+  reml_fit_ko, newdata = grid, type = 'signal', signif = 0.95,
   control = georob::control.predict.georob(extended.output = TRUE))
 sp::gridded(pred_ponto) <- TRUE
 str(pred_ponto)
@@ -287,30 +265,49 @@ summary(validacao)
 plot(validacao)
 ```
 
+#PARTE 2
 
 ```{r}
-# Incerteza
-cond_sim_ko <- gstat::krige(argila_ ~ 1, dnos_in, grid, model = m_exp, nmax = 15, nsim = 8)
+# Condicional simulation 
+m_exp_ko <- coef(reml_fit_ko, what = 'variogram')
+m_exp_ko <- vgm(psill = 5900, model = 'Exp', range = 1200, nugget = 800)
+cond_sim_ko <- gstat::krige(
+ argila_ ~ 1, locations = dnos_in, newdata = grid, model = m_exp_ko, nmax = 15, nsim = 8)
 gridded(cond_sim_ko) <- TRUE
 spplot(cond_sim_ko)
 ```
 
 ```{r}
-beta_ko <- lm(argila_ ~ 1, dnos_in@data) %>% coef()
-g_ko <- gstat::gstat(formula = z ~ 1, dummy = TRUE, model = m_exp, nmax = 15, beta = beta)
-uncond_sim_ko <- predict(g_ko, grid, nsim = 8)
+# uncondicional simulation 
+
+beta <- mean(dnos_in$argila_)
+m_exp_ko <- coef(reml_fit_ko, what = 'variogram')
+m_exp_ko <- vgm(psill = 5900, model = 'Exp', range = 1200, nugget = 800)
+g <- gstat::gstat(formula = z ~ 1, dummy = TRUE, model = m_exp_ko, nmax = 15, beta = beta)
+uncond_sim_ko <- predict(g, newdata = grid, nsim = 8)
 gridded(uncond_sim_ko) <- TRUE
 spplot(uncond_sim_ko)
 ```
 
 ```{r}
-uncond_sim_prop_ko <- 
-  calc(stack(uncond_sim_ko), function (x) x > 50) %>% 
-  calc(sum) %>% 
-  calc(function (x) x / 8)
+# uncondicional simulation 
+
+uncond_sim_prop_ko <-
+  raster::calc(stack(uncond_sim_ko), function (x) x > 250) %>%
+  calc(sum) %>%
+calc(function(x) x / 8)
 plot(uncond_sim_prop_ko, asp = 1)
 ```
 
+```{r}
+# condicional simulation 
+
+cond_sim_prop_ko <-
+  raster::calc(stack(cond_sim_ko), function (x) x > 250) %>%
+  calc(sum) %>%
+calc(function(x) x / 8)
+plot(cond_sim_prop_ko, asp = 1)
+```
 
 #Parte III - Modelagem espacial, fazendo uso de krigagem universal utilizando o mapa pedológico como covariável.
 
@@ -329,31 +326,35 @@ residuals(ku) %>%
 ```
 
 ```{r}
-vario <- 
+vario_ku <- 
   residuals(ku) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites)
-vario_fit <- 
+plot(vario_ku)
+```
+
+```{r}
+vario_fit_ku <- 
   georob::fit.variogram.model(
   vario, variogram.model = 'RMexp', param = c(variance = 20000, nugget = 900, scale = 200), 
   weighting.method = "cressie", method = "BFGS")
-summary(vario_fit)
+summary(vario_fit_ku)
 ```
 
 ```{r}
 reml_ku <- georob::georob(
   argila_ ~ um, dnos_in, locations = ~ coord_x + coord_y, 
   variogram.model = 'RMexp', 
-  param = c(variance = vario_fit$variogram.object[[1]]$param[['variance']], 
-            nugget = vario_fit$variogram.object[[1]]$param[['nugget']], 
-            scale = vario_fit$variogram.object[[1]]$param[['scale']]),
+  param = c(variance = vario_fit_ku$variogram.object[[1]]$param[['variance']], 
+            nugget = vario_fit_ku$variogram.object[[1]]$param[['nugget']], 
+            scale = vario_fit_ku$variogram.object[[1]]$param[['scale']]),
   tuning.psi = 1000, control = georob::control.georob(initial.fixef = 'lm'))
 summary(reml_ku)
 ```
 
 ```{r}
-plot(vario, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
-lines(vario_fit, col = "blue", lty = 'dashed')
+plot(vario_ku, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
+lines(vario_fit_ku, col = "blue", lty = 'dashed')
 ```
 
 ```{r}
@@ -421,6 +422,7 @@ uncond_sim_prop_ku <-
   calc(function (x) x / 8)
 plot(uncond_sim_prop_ku, asp = 1)
 ```
+
 
 
 #Parte iv
