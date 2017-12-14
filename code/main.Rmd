@@ -111,9 +111,6 @@ col_soil_um <- terrain.colors(nlevels(pedologia25$um))
 Será descarregado da base de dados do FEBR o conjunto de dados ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS-CORSAN, Santa Maria, RS.
 
 ```{r}
-#pontos400_0 = dnos_observations e pontos400_l = dnos_layers
-#pontos 400 = dnos
-
 dnos_observations <- febr::observations('ctb0003', which.cols = 'all', progress = FALSE)
 dnos_layers <- febr::layers('ctb0003', soil.vars = "argila", which.cols = 'all', missing.data = 'keep', progress = FALSE)
 
@@ -272,7 +269,8 @@ sp::spplot(pred_ponto, zcol = c("lower", "pred", "upper"), at = at, main = "pred
 ```
 
 ```{r}
-sp::spplot(pred_ponto, zcol = 'se')
+krig_ko <- sp::spplot(pred_ponto, zcol = 'se')
+plot(krig_ko)
 ```
 
 Validação cruzada do modelo utilizando apenas krigagem ordinária.
@@ -307,7 +305,7 @@ spplot(uncond_sim_ko)
 
 ```{r}
 uncond_sim_prop_ko <- 
-  calc(stack(uncond_sim_ko), function (x) x > 500) %>% 
+  calc(stack(uncond_sim_ko), function (x) x > 50) %>% 
   calc(sum) %>% 
   calc(function (x) x / 8)
 plot(uncond_sim_prop_ko, asp = 1)
@@ -382,7 +380,8 @@ str(pred_ku)
 
 
 ```{r}
-sp::spplot(pred_ku, zcol = 'se')
+krig_ku <- sp::spplot(pred_ku, zcol = 'se')
+plot(krig_ku)
 ```
 
 Validação cruzada do modelo utilizando apenas krigagem ordinária.
@@ -417,7 +416,7 @@ spplot(uncond_sim_ku)
 
 ```{r}
 uncond_sim_prop_ku <- 
-  calc(stack(uncond_sim_ku), function (x) x > 500) %>% 
+  calc(stack(uncond_sim_ku), function (x) x > 50) %>% 
   calc(sum) %>% 
   calc(function (x) x / 8)
 plot(uncond_sim_prop_ku, asp = 1)
@@ -451,14 +450,12 @@ plot(nugget ~ scale, prof_reml_fit_scale, ylim = c(0, max(nugget)), type = "l")
 par(op)
 ```
 
-parte da geração do semivariograma pelo modelo linear, que não foi usada pelo fato do georob nao aceitar o modelo nugget
-```{r}
-variogram_lm <- 
-  residuals(lm_fit) %>% 
-  georob::sample.variogram(
-    locations = dnos_in@coords, lag.dist.def = limites)
-vario_fit <- 
-  georob::fit.variogram.model(
-  variogram_lm, variogram.model = 'RMnugget', param = c(variance = var(lm_fit$residuals)))
+```{r, asp = 1}
+par(mfrow=c(2,2))
+plot(uncond_sim_prop_ko)
+plot(uncond_sim_prop_ku)
+plot(krig_ko)
+plot(krig_ku)
 
 ```
+
