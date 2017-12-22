@@ -132,51 +132,9 @@ residuals(lm_fit) %>%
   plot(type = "b", ylab = 'Semivariância', xlab = 'Distância de separação (km)', cex = 1.0, lwd = 1.0)
 ```
 
-#predizer diretamente pelo lm_fit, sem o nugget pelo georob, abaixo
+#predição pelo georob sem função pure nugget. Desenvolvendo via geor.
 
 
-
-```{r}
-grid <- sp::spsample(dnos_in, 10000, type = 'regular')
-```
-
-
-```{r}
-colnames(grid@coords) <- colnames(dnos_in@coords)
-pred_linear <- predict(
-  argila, newdata = grid, type = 'signal', signif = 0.95, na.action = na.omit,
-  control = georob::control.predict.georob(extended.output = TRUE))
-sp::gridded(pred_linear) <- TRUE
-str(pred_linear)
-```
-
-```{r}
-at <- pred_linear@data[, c("pred", "lower", "upper")] %>% range()
-at <- seq(at[1], at[2], length.out = 20)
-sp::spplot(pred_linear, zcol = c("lower", "pred", "upper"), at = at, main = "prediction")
-```
-
-```{r}
-sp::spplot(pred_linear, zcol = 'se')
-```
-
-Validação cruzada do modelo utilizando apenas krigagem ordinária.
-
-```{r}
-validacao <- georob::cv(lm_fit, nset = 375)
-summary(validacao)
-```
-
-```{r}
-1 - sum((validacao$pred$data - validacao$pred$pred)^2) / 
-  sum((validacao$pred$data - mean(validacao$pred$data))^2)
-
-plot(validacao)
-
-```
-
-
-train
 
 
 #Parte II - Modelagem puramente espacial
