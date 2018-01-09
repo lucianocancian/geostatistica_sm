@@ -1,35 +1,34 @@
 ---
-title: "argila_dnos"
-author: "LC"
+title: "Modelagem geoestatística do conteúdo de argila da bacia do DNOS, Santa Maria, RS"
+author: "Luciano Campos Cancian"
 date: "4 de dezembro de 2017"
-output:
-  bookdown::word_document2:
-    reference_docx: ../docs/template.docx
+output: html_document
 bibliography: biblio.bib
 csl: abnt.csl
-
 lang: pt
 ---
 
-Mover o arquivo word dentro da pasta docs
-
 ```{r, eval=FALSE, echo=FALSE}
+# Mover o arquivo html para dentro da pasta docs
 rmarkdown::render("main.Rmd", encoding = "UTF-8", output_dir = "../docs")
 ```
-
----
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-#Modelagem geoestatística do conteúdo de argila da bacia do DNOS
+<!-- ASR: Sempre deixar um espaço entre o símbolo '#' e o texto. -->
+# Introdução
 
-  O presente estudo tem como objetivo realizar a predição espacial do teor de argila no solo na bacia do reservatorio do Departamento Nacional de Obras de Saneamento-Companhia Riograndense de Saneamento (DNOS-CORSAN), no município de Santa Maria/RS. Os dados foram coletados em locais selecionados intencionalmente ou por conveniência, perfazendo um total de 400 observações em pontos amostrais. Tais dados fazem parte do projeto FEBR e estão disponíveis [aqui](https://drive.google.com/drive/folders/0B7xsLbrOA23oNkRKUEUtajF4Wjg).
-  O clima da região, conforme o sistema de classificação de Köppen é subtropical do tipo Cfa. A área compreende a região de transição entre o Planalto e a Depressão Central, denominada Rebordo do Planalto do RS. As características da área de estudo condicionam uma alta variabilidade geomorfológica. O relevo local varia de plano a montanhoso. A geomorfologia da área pode ser caracterizada como complexa, sendo uma transição de rochas ígneas (região do Planalto) e rochas sedimentares (Depressão Central).
-  Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, será utilizado o comando $devtools::install_github$.
+O presente estudo tem como objetivo realizar a predição espacial do teor de argila no solo na bacia do reservatorio do Departamento Nacional de Obras de Saneamento-Companhia Riograndense de Saneamento (DNOS-CORSAN), no município de Santa Maria/RS. Os dados foram coletados em locais selecionados intencionalmente ou por conveniência, perfazendo um total de 400 observações em pontos amostrais. Tais dados fazem parte do projeto FEBR e estão disponíveis [aqui](https://drive.google.com/drive/folders/0B7xsLbrOA23oNkRKUEUtajF4Wjg).
 
-  Após os pacotes serem instalados, devem ser carregados (a partir do comando $library$):
+<!-- ASR: Para criar um novo parágrafo é preciso deixar uma linha em branco. -->
+O clima da região, conforme o sistema de classificação de Köppen, é subtropical do tipo Cfa. A área compreende a região de transição entre o Planalto e a Depressão Central, denominada Rebordo do Planalto do RS. As características da área de estudo condicionam uma alta variabilidade geomorfológica. O relevo local varia de plano a montanhoso. A geomorfologia da área pode ser caracterizada como complexa, sendo uma transição de rochas ígneas (região do Planalto) e rochas sedimentares (Depressão Central).
+
+Primeiramente serão instalados os pacotes necessários para o carregamento das funções que serão utilizadas no desenvolvimento de todo o trabalho. Embora sejam utilizadas em diferentes partes do trabalho, para fins práticos recomenda-se que estes sejam instalados em sua totalidade para o bom andamento das análises. Para o carregamento dos dados do FEBR, que deve ser instalado a partir do github, será utilizado o comando `devtools::install_github`.
+<!-- ASR: O marcador '$' serve para criar equações LaTeX. Para código usa-se a crase, '`', como marcador. Corrija todas as ocorrências abaixo. -->
+
+Após os pacotes serem instalados, devem ser carregados (a partir do comando $library$):
   
 ```{r}
 library(mapview)
@@ -49,17 +48,16 @@ library(bookdown)
 library(gstat)
 ```
 
-  Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além da criação uma rampa de cores que serão utilizadas na geração dos mapas.
+Devemos também definir o sistema de referência de coordenadas geográficas (Fonte: http://spatialreference.org/ref/epsg/) utilizadas, além da criação uma rampa de cores que serão utilizadas na geração dos mapas.
 
 ```{r}
-
 wgs84utm22s <- sp::CRS('+proj=utm +zone=22 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
 sirgas2000 <- sp::CRS('+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs')
 
 col_soil_var <- topo.colors(100)
 ```
 
-  Com os pacotes carregados, serão baixados os dados do FEBR para a área estudada. Primeiramente serão descarregados os arquivos do mapa pedológico para a área estudada em um diretótio local. Estes dados serão utilizados para comparação dos métodos de krigagem, investigando a influência da utilização do mapa pedológico como covariável preditora.
+Com os pacotes carregados, serão baixados os dados do FEBR para a área estudada. Primeiramente serão descarregados os arquivos do mapa pedológico para a área estudada em um diretótio local. Estes dados serão utilizados para comparação dos métodos de krigagem, investigando a influência da utilização do mapa pedológico como covariável preditora.
   
 ```{r}
 data_folder <- '../data/'
@@ -76,28 +74,38 @@ if (download) {
 }
 ```
 
-  Com a intenção de demonstrar a distribuição das classes de solo e unidades de mapeamento dentro da bacia, além da distribuição dos pontos onde foram coletadas as amostras, será carregado o mapa pedologico a partir da função $raster::shapefile$. Será criada também uma rampa de cores para representação das unidades de mapeamento. Também será utilizada a função $sp::spTransform$ para projetar as coordenadas original no plano cartesiano (UTM).
+Com a intenção de demonstrar a distribuição das unidades de mapeamento dentro da bacia, além da distribuição dos pontos onde foram coletadas as amostras, será carregado o mapa pedologico a partir da função $raster::shapefile$. Será criada também uma rampa de cores para representação das unidades de mapeamento. Também será utilizada a função $sp::spTransform$ para projetar as coordenadas original no plano cartesiano (UTM).
   
 ```{r}
-pedologia25 <- 
-  glue('../data/pedologia25.shp') %>% 
-  raster::shapefile(stringsAsFactors = TRUE, encoding = 'UTF-8') %>% 
-  sp::spTransform(wgs84utm22s)
-
+# ASR: Detectar sistema operacional para decidir se precisa definir a codificação (encoding) dos caracteres
+#     de texto no arquivo do mapa pedológico.
+os <- Sys.info()[['sysname']]
+switch(
+  os,
+  Windows = {
+    pedologia25 <- raster::shapefile(x = '../data/pedologia25.shp', stringsAsFactors = TRUE, encoding = 'UTF-8')
+  },
+  Linux = {
+    pedologia25 <- raster::shapefile(x = '../data/pedologia25.shp', stringsAsFactors = TRUE)
+  })
+pedologia25 <- sp::spTransform(x = pedologia25, CRSobj = wgs84utm22s)
 pedologia25@data
 col_soil_um <- terrain.colors(nlevels(pedologia25$um))
 ```
 
-  Visto isso, agora será descarregado da base de dados do FEBR o conjunto de dados ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS. Também será criado o objeto espacial com os pontos onde foram amostrados os valores de argila no solo.
+<!-- ASR: Não inserir indentação no início dos parágrafos. Esse tipo de formatação não tem efeito aqui. Corrija todas as ocorrências abaixo. -->
+  Visto isso, agora será descarregado do repositório FEBR o conjunto de dados ctb0003, referente ao conjunto de dados do solo da bacia do reservatório do DNOS. Também será criado o objeto espacial com os pontos onde foram amostrados os valores de argila no solo.
+<!-- ASR: Lembre-se que o febr é um repositório ao invés de uma base de dados. -->
   
 ```{r}
 dnos_observations <- febr::observations('ctb0003', which.cols = 'all', progress = FALSE)
-dnos_layers <- febr::layers('ctb0003', soil.vars = "argila", which.cols = 'all', missing.data = 'keep', progress = FALSE)
+dnos_layers <- 
+  febr::layers('ctb0003', soil.vars = "argila", which.cols = 'all', missing.data = 'keep', progress = FALSE)
 
 id <- c('dataset_id', 'observacao_id')
 dnos <- 
   merge(dnos_observations, dnos_layers, by.x = id, by.y = id) %>% 
-  select(observacao_id, coord_x, coord_y, taxon_sibcs_2009, argila_)
+  dplyr::select(observacao_id, coord_x, coord_y, taxon_sibcs_2009, argila_)
 rm(dnos_layers, dnos_observations)
 sp::coordinates(dnos) <- ~ coord_x + coord_y
 sp::proj4string(dnos) <- sirgas2000
@@ -110,6 +118,7 @@ dnos_in <- dnos[!is.na(dnos$um), ]
 
   Será plotado o mapa com a localização dos pontos amostrais distribuidos sobre o mapa pedológico da área. Para isso será usada a função $sp::spplot$. Notemos que, anteriormente, já havia sido criada uma rampa de cores específica para pedologia25, constituída de tantas cores quantas foram as unidades de mapeamento.
 
+<!-- ASR: O nome dos pedaços de código não deve conter espaços. O caso abaixo seria 'plot-do-mapa-pedologico'.  -->
 ```{r, plot do mapa pedologico}
 sp::spplot(
   pedologia25, col.regions = col_soil_um, alpha.regions = 0.3, colorkey = FALSE) +
@@ -119,8 +128,33 @@ sp::spplot(
   
   Pode ser verificada a distribuição dos pontos amostrais com maior densidade em algumas regiões. Isso possivelmente é decorrência da facilidade de acesso, seja pela presença de vias ou pelas caracteristicas do terreno, que por sua vez podem dificultar ou impossibilitar o acesso.
 
+```{r}
+grid <- sp::spsample(dnos_in, 10000, type = 'regular')
+grid <- 
+   sp::SpatialPointsDataFrame(
+     coords = grid@coords, 
+     data = data.frame(
+       um = sp::over(grid, pedologia25) %>% unlist()),
+     proj4string = grid@proj4string)
+colnames(grid@coords) <- colnames(dnos_in@coords)
+```
+
+# Modelagem puramente determinística
+
+```{r}
+lm_fit <- lm(formula = argila_ ~ um, data = dnos_in)
+grid$pred_lm <- predict(object = lm_fit, newdata = grid)
+spplot(obj = grid, zcol = "pred_lm")
+```
+
+```{r}
+summary(lm_fit)
+```
+
 
 # Modelagem puramente espacial
+
+<!-- ASR: O modelo de regressão linear estima os efeitos fixos (determinísticos). Seu uso parte do princípio de que a média varia no espaço, ou seja, não é constante. Assim, a modelagem puramente espacial não inclui o modelo de regressão linear, pois assume que a média é constante em toda a área (estacionariedade de primeira ordem) ou, pelo menos, dentro de curtos intervalos de distância (hipóstese intrínseca), conforme dito abaixo. -->
 
   Nesta etapa será realizada a predição do conteúdo de argila no solo na bacia do DNOS usando krigagem ordinária. Essa prática consiste em pressupor que o valor médio de uma variável é constante em curtos intervalos de distância, fazendo a predição espacial tanto dos efeitos aleatórios como da média espacial. Primeiramente, será calculada uma regressão linear do valor de argila em função apenas de seu próprio valor.
 
@@ -129,8 +163,11 @@ ko <- lm(argila_ ~ 1, dnos_in)
 summary(ko)
 ```
 
-```{r}
-limites <- seq(0, 1500, length.out = 20)
+<!-- ASR: É importante ajustar o aspecto das figuras, preferencialmente na proporção 1:1 entre os eixos x e y. -->
+```{r, fig.asp=1}
+# ASR: Melhor definir a distância máxima programaticamente.
+max_dist <- dist(dnos_in@coords) %>% max() / 3
+limites <- seq(0, max_dist, length.out = 20)
 residuals(ko) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites,
@@ -140,12 +177,13 @@ residuals(ko) %>%
 
   Conforme mostra a figura anterior, os resíduos da regressão linear possuem dependência espacial. Partindo da primeira classe de distância de separação, a semivariância aumenta de maneira relativamente rápida. Por não haver  existência de estruturas de autocorrelação espacial dependentes da direção, foi assumida a isotropia do processo, permitindo assim criar o semivariograma independente de direção.
   
-```{r}
+```{r, fig.asp=1}
 vario_ko <- 
   residuals(ko) %>% 
   georob::sample.variogram(
     locations = dnos_in@coords, lag.dist.def = limites)
-plot(vario_ko)
+# ASR: Sempre é bom visualizar também o número de pares
+plot(vario_ko, annotate.npairs = TRUE)
 ```
   
   Em seguida, será ajustado ao variograma amostral um modelo exponencial do variograma. Será usado o método dos quadrados mínimos não-lineares ponderados,  conforme o método de $Cressie$. A estimativa dos parâmetros do variograma é conduzido por otimização, utilizando a função $stats::optim(method = "BFGS"$). A partir da visualização do variograma experimental, precisamos estimar a  $variância$, o $nugget$ e a $escala do variograma$.
@@ -159,7 +197,7 @@ vario_fit_ko <-
 
   É possível verificar a concordância do modelo escolhido, onde a curva se assemelha com a caracteristica dos dados.
 
-```{r}
+```{r, fig.asp=1}
 plot(vario_ko, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semivariância')
 lines(vario_fit_ko, col = "blue", lty = 'dashed')
 ```
@@ -177,20 +215,9 @@ reml_fit_ko <- georob::georob(
 summary(reml_fit_ko)
 ```
 
-```{r}
-grid <- sp::spsample(dnos_in, 10000, type = 'regular')
-grid <- 
-   sp::SpatialPointsDataFrame(
-     coords = grid@coords, 
-     data = data.frame(
-       um = sp::over(grid, pedologia25) %>% unlist()),
-     proj4string = grid@proj4string)
-```
-
   Estimado o semivariograma, será realizada a predição espacial do valor de argila, com base nos parâmetros fixados no semivariogrâma. A predição será realizada pelo método $signal$, com significância de 95%.
   
 ```{r}
-colnames(grid@coords) <- colnames(dnos_in@coords)
 pred_ponto_ko <- predict(
   reml_fit_ko, newdata = grid, type = 'signal', signif = 0.95,
   control = georob::control.predict.georob(extended.output = TRUE))
@@ -199,11 +226,19 @@ str(pred_ponto_ko)
 ```
   
   A figura abaixo demonstra os valores de argila preditos e espacializados por krigagem na área de estudo.
-  
+
+<!-- ASR: As predições estão na coluna 'pred'. A coluna 'se' armazena no erro de predição, ou seja, uma medida de incerteza. -->
+
+```{r}
+sp::spplot(pred_ponto_ko, zcol = 'pred')
+```
+
 ```{r}
 krig_ko <- sp::spplot(pred_ponto_ko, zcol = 'se')
-plot(krig_ko)
+plot(krig_ku)
 ```
+
+<!-- ASR: O objetivo do relatório é conter, além dos resultados das análises, um relato de sua experiência, sua forma de ver e entender o conteúdo e o que foi feito. O parágrafo abaixo é, fundamentalmente, uma cópia modificada do texto do material de apoio. Não há muito sentido em incluir isso no seu relatório. Ademais, essa prática pode ser interpretada como plágio. Tome muito cuidado com isso no futuro. -->
 
   Contudo, para que tenhamos uma medida de acurácia dos dados, será aplicada a validação cruzada aos dados gerados. O procedimento da validação cruzada consiste na partição aleatória do conjunto completo de dados em $k$ subconjuntos. A cada passo da validação cruzada, um dos subconjuntos é utilizado apenas como conjunto de dados de validação. Os demais subconjuntos são utilizados para constituir o conjunto de calibração. Com o modelo calibrado, faz-se a predição dos valores de argila nas observações do conjunto de dados de validação. Esse procedimento é repetido até que cada subconjunto $k$ seja, em algum momento, deixado separado para constituir o conjunto de dados de validação enquanto os outros conjuntos são utilizados para calibração do modelo. Com as predições realizadas para cada um dos subconjuntos, são calculados os erros para avaliar a qualidade das predições.
   
@@ -215,11 +250,17 @@ summary(validacao_ko)
 ```{r, asp = 1}
 1 - sum((validacao_ko$pred$data - validacao_ko$pred$pred)^2) / 
   sum((validacao_ko$pred$data - mean(validacao_ko$pred$data))^2)
+```
 
+<!-- ASR: É importante separar as saídas de texto das saídas gráficas. Do contrário o documento final fica confuso. -->
+
+```{r}
 plot(validacao_ko)
 ```
-  
+
   As estatisticas de erro geradas pela validação cruzada serão utilizadas para comparação com os demais modelos, permitindo avaliar a eficiência de ambos.
+
+<!-- ASR: A incerteza da predição já fora mostrada acima. Uma medida dela é o erro de predição, armazenado na coluna 'se'. As simulações possuem outra finalidade, qual seja, levar em conta a incerteza quando os dados servem de entrada para outro modelo. Esse não é o caso dessa atividade. Portanto, o código abaixo é desnecessário. -->
 
 Serão gerados mapas contendo a incerteza da predição realizada. O grau de incerteza contido em um mapa é fundamental para avaliar a qualidade da informação contida no mapa produzido e,
 conseqüentemente, verificar o grau de adequação para usos posteriores.
@@ -311,6 +352,7 @@ plot(vario_ku, type = "b", xlab = 'Distância de separação (m)', ylab = 'Semiv
 lines(vario_fit_ku, col = "blue", lty = 'dashed')
 ```
 
+<!-- ASR: O objeto 'grid' já fora criado acima. Não há necessidade de criar novamente. -->
 ```{r}
 grid <- sp::spsample(dnos_in, 10000, type = 'regular')
 grid <- 
@@ -327,14 +369,22 @@ pred_ku <- predict(
   reml_ku, newdata = grid, type = 'signal', signif = 0.95,
   control = georob::control.predict.georob(extended.output = TRUE))
 sp::gridded(pred_ku) <- TRUE
-spplot(pred_ku)
-str(pred_ku)
 ```
+
+<!-- ASR: Conforme dito acima, as predições estão na coluna 'pred' -->
+
+```{r}
+sp::spplot(pred_ku, zcol = 'pred')
+```
+
+<!-- ASR: Estimativa da incerteza. -->
 
 ```{r}
 krig_ku <- sp::spplot(pred_ku, zcol = 'se')
 plot(krig_ku)
 ```
+
+<!-- ASR: A krigagem ordinária fora usada acima. Aqui é a krigagem universal. -->
 
   Validação cruzada do modelo utilizando apenas krigagem ordinária.
 
@@ -346,9 +396,15 @@ summary(validacao_ku)
 ```{r}
 1 - sum((validacao_ku$pred$data - validacao_ku$pred$pred)^2) / 
   sum((validacao_ku$pred$data - mean(validacao_ku$pred$data))^2)
+```
 
+<!-- ASR: Separar objetos. -->
+
+```{r}
 plot(validacao_ku)
 ```
+
+<!-- ASR: Não há necessidade de simulações. -->
 
 ```{r}
 m_exp_ku <- coef(vario_fit_ku, what = 'variogram')
@@ -387,6 +443,8 @@ plot(cond_sim_prop_ku, asp = 1)
 
 
 # Avaliação dos diferentes modelos na predição dos valores de argila
+
+<!-- ASR: Essas figuras mostram o erro de predição (incerteza) ao invés dos valores preditos de argila. -->
 
 ```{r, asp = 1}
 plot(krig_ko, main = 'Valores de argila no solo via krigagem ordinaria')
